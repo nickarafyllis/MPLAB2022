@@ -71,7 +71,7 @@ int main() {
     lcd_init();
     
     //init ADC
-    //REFSn[1:0]=01 => select Vref=5V, MUXn[4:0]=0010 => select ADC2(pin PC2)
+    //REFSn[1:0]=01 => select Vref=5V, MUXn[4:0]=0011 => select ADC3(pin PC3)
 	//ADLAR=0 => Right adjust the ADC result
     ADMUX = 0b01000011; ///
     //ADEN=1 => ADC Enable, ADCS=0 => No Conversion,
