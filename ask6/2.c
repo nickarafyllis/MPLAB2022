@@ -8,6 +8,8 @@
 #define SCL_CLOCK 100000L // twi clock in Hz
 //Fscl=Fcpu/(16+2*TWBR0_VALUE*PRESCALER_VALUE)
 #define TWBR0_VALUE ((F_CPU/SCL_CLOCK)-16)/2
+
+uint8_t ret_arr[16] = {0};
 // PCA9555 REGISTERS
 typedef enum {
 REG_INPUT_0 = 0,
@@ -166,20 +168,23 @@ uint8_t scan_row(uint8_t row){
     PCA9555_0_write(REG_CONFIGURATION_1, 0xF0); //Set IO1_0 as output, IO1_4-7 as input
     //activate desired row , 1 - 4.
     uint8_t x = 1;
-    x = ~(x << row);
+    x = ~(x << (row-1));
     PCA9555_0_write(REG_OUTPUT_1, x);
     //check if desired row's buttons are pressed.
     _delay_ms(1);
     ret_val = PCA9555_0_read(REG_INPUT_1);
-    ret_val = ret_val & 0xF0;
+    ret_val = ~(ret_val & 0xF0);
     ret_val = ret_val >> 4;
     return ret_val; 
     
 }
 
 uint8_t* scan_keypad(){
-    uint8_t i, j, x, mask;
-    static uint8_t ret_arr[16] = {0};
+    int i,j;
+    for(i = 0; i < 16; i++){
+        ret_arr[i] = 0;
+    }
+    uint8_t x, mask;
     for(i = 0; i < 4; i++){
         x = scan_row(i+1);      //read current row
         mask = 1;               //init mask
@@ -194,21 +199,30 @@ uint8_t* scan_keypad(){
 
 uint8_t* scan_keypad_rising_edge(){
     //can we return 4x4 array to pointer???
-    uint8_t i; 
-    static uint8_t ret_arr[16] = {0};
-    uint8_t *p1, *p2; 
-    p1 = scan_keypad();
-    _delay_ms(15);
-    p2 = scan_keypad();
+    int i; 
+    uint8_t p1[16] = {0};
+    uint8_t p2[16] = {0};
+    uint8_t* temp = scan_keypad();
     for(i = 0; i < 16; i++){
-        if(p1[i] != p2[i])
+        p1[i] = temp[i];
+    }
+    _delay_ms(15);
+    temp = scan_keypad();
+    for(i = 0; i < 16; i++){
+        p2[i] = temp[i];
+    }
+    for(i = 0; i < 16; i++){
+        ret_arr[i] = 0;
+    }
+    for(i = 0; i < 16; i++){
+        if(p1[i] < p2[i])
             ret_arr[i] = 1;
     }
     return ret_arr;
 }
 
 uint8_t keypad_to_ascii(){
-    uint8_t i, found = -1;
+    int i, found = 0;
     uint8_t char_arr[] = {'*','0', '#', 'D', '7', '8', '9', 'C', '4', '5', '6', 'B', '1', '2', '3', 'A'};
     uint8_t* p1 = scan_keypad_rising_edge();
     for(i = 0; i < 16; i++){
@@ -224,7 +238,7 @@ uint8_t keypad_to_ascii(){
         return 0;
 }
 
-void write_2_nibbles(char x){
+void write_2_nibbles(unsigned char x){
 	int temp = x;		//sends 4 MSB
 	int d = PIND;
 	d = d & 0x0F;
@@ -242,14 +256,14 @@ void write_2_nibbles(char x){
 	return;
 }
 
-void lcd_data(char x){
+void lcd_data(unsigned char x){
 	PORTD |= 0b00000100;	//PD2 = 1
 	write_2_nibbles(x);
 	_delay_us(100);
 	return;
 }
 
-void lcd_command(char x){
+void lcd_command(unsigned char x){
 	
 	PORTD &= 0b11111011;	//PD2 = 0
 	write_2_nibbles(x);
@@ -281,13 +295,13 @@ void lcd_init(){
 	_delay_us(1530);
 	temp = 0x06;			//enable auto increment of counter address
 	lcd_command(temp);
-	return;
+	//return;
 }
 
 int main(){
     DDRB = 0xFF;              //set PORTB as output
-    //DDRD = 0xFF;            //set PORTD as output
-    //lcd_init();             //init LCD
+    DDRD = 0xFF;            //set PORTD as output
+    lcd_init();             //init LCD
     _delay_ms(5);
     twi_init();             //init twi
     _delay_ms(5);
@@ -296,14 +310,17 @@ int main(){
     uint8_t first, second;
     while(1){
         first = 0;
-        second = 0;
-        //lcd_command(1);         //clear LCD display
+
+        lcd_command(1);         //clear LCD display
         while(first == 0 || first > '9' || first < '0')         //wait for 1st number to be pressed
             first = keypad_to_ascii();
-        //lcd_data(first);
+        _delay_us(1000);
+        lcd_data(first);
+        second = 0;
         while(second == 0 || second > '9' || second < '0')      //wait for 2nd number to be pressed
             second = keypad_to_ascii();
-        //lcd_data(second);
+        _delay_us(1000);
+        lcd_data(second);
         if(first == '5' && second == '6'){ //check if numbers are 5 and 6 accordingly(number of team))
             PORTB = 0x3F;                  //If numbers are 5 and 6
             _delay_ms(4000);               //turn leds PB0-5 ON for 4 seconds
@@ -317,7 +334,6 @@ int main(){
                 PORTB=0x00;
                 _delay_ms(250);
             }
-        }
         }
     }
     return 0;
