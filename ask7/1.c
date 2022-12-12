@@ -2,16 +2,11 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#define PCA9555_0_ADDRESS 0x40 //A0=A1=A2=0 by hardware
-#define TWI_READ 1 // reading from twi device
-#define TWI_WRITE 0 // writing to twi device
-#define SCL_CLOCK 100000L // twi clock in Hz
-//Fscl=Fcpu/(16+2*TWBR0_VALUE*PRESCALER_VALUE)
-#define TWBR0_VALUE ((F_CPU/SCL_CLOCK)-16)/2
+
 #define PD4 0x10
 #define PD4_ 0xEF 
 
-uint8_t r24, r25;
+uint8_t low, high;
 
 uint8_t one_wire_reset(){
     DDRD |= PD4;       //set PD4 as output
@@ -60,7 +55,7 @@ void one_wire_transmit_bit(uint8_t out_bit){
     PORTD &= PD4_;      //
     _delay_us(2);       //time slot 2 usec
     
-    PORTD |= out_bit;   //PD4 = out_bit value
+    PORTD |= (out_bit << 4) ;   //PD4 = out_bit value
     
     _delay_us(58);      //wait 58 usec for connected device to sample the line
     
@@ -87,7 +82,10 @@ void one_wire_transmit_byte(uint8_t out_byte){
     int i;
     uint8_t mask = 1,temp;
     for(i = 0; i < 8; i++){
-        temp = out_byte & mask;
+        if(out_byte & mask)
+            temp = 1;
+        else 
+            temp = 0;
         one_wire_transmit_bit(temp);
         mask = mask << 1;
     }
@@ -96,8 +94,8 @@ void one_wire_transmit_byte(uint8_t out_byte){
 
 void get_temp(){
     if(one_wire_reset() == 0){      //init
-        r25 = 0x80;
-        r24 = 0x00;
+        low = 0x00;
+        high = 0x80;
         return;
     }
 
@@ -108,19 +106,19 @@ void get_temp(){
     while(one_wire_receive_bit());  //Wait for DS1820 to send bit with value 1
 
     if(one_wire_reset() == 0){      //init
-        r25 = 0x80;
-        r24 = 0x00;
+        high = 0x80;
+        low = 0x00;
         return;
     }
 
     one_wire_transmit_byte(0xCC);   //Send command 0xCC
 
     one_wire_transmit_byte(0xBE);   //Send command 0xBE
-    r24 = one_wire_receive_byte();  //get first 8 bits(assuming we read 8 lsb first)
-    r25 = one_wire_receive_byte();  //get rest 8 bits
+    low = one_wire_receive_byte();  //get first 8 bits(assuming we read 8 lsb first)
+    high = one_wire_receive_byte();  //get rest 8 bits
     if(one_wire_reset() == 0){      //init
-        r25 = 0x80;
-        r24 = 0x00;
+        high = 0x80;
+        low = 0x00;
         return;
     }
 }
