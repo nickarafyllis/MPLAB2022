@@ -196,8 +196,7 @@ void print_string(){
 }
 
 int main() {
-    DDRD = 0xFF;            //set PORTD as output
-    
+    DDRD = 0xFF;            //set PORTD as output    
     
     lcd_init();             //init LCD
     low = 0;
@@ -212,31 +211,72 @@ int main() {
         }
         else{
             DDRD = 0xFF;            //set PORTD as output
-            if(high == 0b11111000){            //if high=0xFF, temperature is negative
+            //high |= 0b11111000; //force negative test
+            uint8_t sign = high & 0b11111000; //get sign bits 
+            if(sign == 0b11111000){            //if high=0xFF, temperature is negative
                 lcd_data('-');
-                uint16_t both = (high & 0b0111);                
+                uint16_t both = (high & 0b0111);
+                    
                 both = (both  << 8) + low;
-                both = ~(both-1);       //2's complement architecture for negative number
+                //both = 0xFFA9;      for testing       
+                both = (~(both-1))&0x7FF;       //2's complement architecture for negative number               
+                uint16_t points = both & 0b1111;  
+                points= points *0.0625*1000;
+                uint16_t points1 = points/100;
+                uint16_t points2 = (points%100)/10;
+                uint16_t points3 = points%10;
                 both = both*0.0625;
                 uint8_t units = both%10; 
-                uint8_t decades = both/10;
+                uint8_t decades1 = both/10;
+                if(decades1 >= 10){
+                    uint8_t decades2 = decades1/10;
+                    decades1 = decades1%10;
+                    lcd_data('0'+decades2);      // cast to ascii                    
+                }
+                else
                 _delay_ms(1);
-                lcd_data('0'+decades);      // cast to ascii
+                lcd_data('0'+decades1);      // cast to ascii
                 lcd_data('0'+units);        // cast to ascii
-                lcd_data(0b10110000);   //Print temperature values
+                //lcd_data(0b10110000);   //Print temperature values
+                _delay_ms(1);
+                lcd_data('.');
+                _delay_ms(1);
+                lcd_data('0'+points1);
+                _delay_ms(1);
+                lcd_data('0'+points2);
+                _delay_ms(1);
+                lcd_data('0'+points3);
                 _delay_ms(1);                
                 lcd_data('C');          //
             }
             else {                      //else temperature is positive
                 uint16_t both = (high & 0b0111);                
-                both = (both  << 8) + low;               
+                both = (both  << 8) + low; 
+                uint16_t points = both & 0b1111;  
+                points= points *0.0625*1000;
+                uint16_t points1 = points/100;
+                uint16_t points2 = (points%100)/10;
+                uint16_t points3 = points%10;
                 both = both*0.0625;
                 uint8_t units = both%10; 
-                uint8_t decades = both/10;
+                uint8_t decades1 = both/10;
+                if(decades1 >= 10){
+                    uint8_t decades2 = both/100;
+                    decades1 = decades1%10;
+                    lcd_data('0'+decades2);      // cast to ascii                    
+                }
                 _delay_ms(1);
-                lcd_data('0'+decades);      // cast to ascii
+                lcd_data('0'+decades1);      // cast to ascii
                 _delay_ms(1);
                 lcd_data('0'+units);        // cast to ascii
+                _delay_ms(1);
+                lcd_data('.');
+                _delay_ms(1);
+                lcd_data('0'+points1);
+                _delay_ms(1);
+                lcd_data('0'+points2);
+                _delay_ms(1);
+                lcd_data('0'+points3);
                 //extended ascii character not available
                 /*
                 _delay_ms(3);
