@@ -1,10 +1,10 @@
 #define F_CPU 16000000UL
 #include <avr/interrupt.h>
-#include <avr/io.h>  
-#include <util/delay.h>
+#include <avr/io.h>
 #include <string.h>
+#include <util/delay.h>
 
-#define BUFFER_SIZE 128
+#define BUFFER_SIZE 256
 
 void write_2_nibbles(unsigned char x) {
   int temp = x; // sends 4 MSB
@@ -112,24 +112,27 @@ uint8_t usart_receive() {
   return UDR0;
 }
 
-void writeMessageToLcd(const char* message) {
+void writeMessageToLcd(const char *message) {
   lcd_command(0x01); // Clear the LCD screen
   lcd_command(0x80); // Set the cursor to the first character of the first line
+  _delay_ms(10);
   for (int i = 0; i < strlen(message); i++) {
     lcd_data(message[i]);
   }
 }
 
-void transmitStringOverUart(const char* message) {
+void transmitStringOverUart(const char *message) {
+  _delay_ms(10);
   for (int i = 0; i < strlen(message); i++) {
     usart_transmit(message[i]);
   }
 }
 
-char* readMessageFromUart(char* buffer, int bufferSize) {
+char *readMessageFromUart(char *buffer, int bufferSize) {
   int messageIndex = 0;
 
-  // Loop until we reach the end of the message (indicated by a newline character)
+  // Loop until we reach the end of the message (indicated by a newline
+  // character)
   while (1) {
     // Read a character from the UART interface
     char c = usart_receive();
@@ -155,63 +158,62 @@ char* readMessageFromUart(char* buffer, int bufferSize) {
   return buffer;
 }
 
-
 int main() {
   DDRD = 0xFF; // set PORTD as output
 
   lcd_init(); // init LCD
-  _delay_us(50);
-  
+  _delay_us(500);
+
   // Initialize the UART interface with a baud rate of 9600
-  usart_init(9600);
+  usart_init(103);
   _delay_us(50);
 
-  //useful for reconnection
-  //messageString = "Fail"
-  //while(strcmp(messageString, "Success") =! 0){ 
-  
-  // Transmit the string "ESP:connect\n" over UART
-  const char* espConnectString = "ESP:connect\n";
-  transmitStringOverUart(espConnectString);
+const char *messageString;
+// Create a buffer to store the incoming message
+char message[BUFFER_SIZE];
+// Transmit the string "ESP:restart\n" over UART
+const char *espRestartString = "ESP:restart\n";
+transmitStringOverUart(espRestartString);
+_delay_ms(500);
+// Transmit the string "ESP:connect\n" over UART
+const char *espConnectString = "ESP:connect\n";
+transmitStringOverUart(espConnectString);
+// Read the message from the UART interface
+messageString = readMessageFromUart(message, BUFFER_SIZE);
 
-  // Create a buffer to store the incoming message
-  char message[BUFFER_SIZE];
-  // Read the message from the UART interface
-  char* messageString = readMessageFromUart(message, BUFFER_SIZE);
-  
-  // Check if the message is "Success" or "Fail"
-  if (strcmp(messageString, "Success") == 0) {
-    // Write "Connection successful" to the LCD screen
-    writeMessageToLcd("1.Success");
-  } 
-  else if (strcmp(messageString, "Fail") == 0) {
-    // Write "Connection failed" to the LCD screen
-    writeMessageToLcd("1.Fail");
-  } 
-  else return 0; //another message could be useful here
+if (strstr(messageString, "\"Success\"") != NULL) {
+  // Write "Connection successful" to the LCD screen
+  writeMessageToLcd("1.Success");
+} else if (strstr(messageString, "\"Fail\"") != NULL) {
+  //  Write "Connection failed" to the LCD screen
+  writeMessageToLcd("1.Fail");
+} else {
+  writeMessageToLcd(messageString);
+}
 
-  //delay to make LCD message visible
-  _delay_ms(2);
-  
-  // Transmit the string "ESP:url:"http://192.168.1.250:5000/data"\n" over UART
-  const char* espUrlString = 'ESP:url:"http://192.168.1.250:5000/data"\n';
-  transmitStringOverUart(espUrlString);
+// delay to make LCD message visible
+_delay_ms(6000);
 
-  // Read the message from the UART interface
-  messageString = readMessageFromUart(message, BUFFER_SIZE);
-  
-  // Check if the message is "Success" or "Fail"
-  if (strcmp(messageString, "Success") == 0) {
-    // Write "Connection successful" to the LCD screen
-    writeMessageToLcd("1.Success");
-  } 
-  else if (strcmp(messageString, "Fail") == 0) {
-    // Write "Connection failed" to the LCD screen
-    writeMessageToLcd("1.Fail");
-  } 
-  else return 0; //another message could be useful here
+// reset buffer
+memset(message, 0, sizeof(message));
 
-  //delay to make LCD message visible
-  _delay_ms(2);
+// Transmit the string "ESP:url:"http://192.168.1.250:5000/data"\n" over
+// UART
+const char *espUrlString = "ESP:url:\"http://192.168.1.250:5000/data\"\n";
+transmitStringOverUart(espUrlString);
 
+// Read the message from the UART interface
+messageString = readMessageFromUart(message, BUFFER_SIZE);
+
+_delay_ms(1000);
+// Check if the message is "Success" or "Fail"
+if (strstr(messageString, "\"Success\"") != NULL) {
+  // Write "Connection successful" to the LCD screen
+  writeMessageToLcd("2.Success");
+} else if (strstr(messageString, "\"Fail\"") != NULL) {
+  // if (strcmp(messageString, "Fail") == 0)
+  //  Write "Connection failed" to the LCD screen
+  writeMessageToLcd("2.Fail");
+} else
+  writeMessageToLcd(messageString); // another message could be useful here
 }
