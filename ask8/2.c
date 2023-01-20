@@ -1,3 +1,4 @@
+
 #define F_CPU 16000000UL
 #include <avr/interrupt.h>
 #include <avr/io.h>
@@ -520,47 +521,44 @@ char *readMessageFromUart(char *buffer, int bufferSize) {
 
 
 int main() {
-  DDRD = 0xFF; // set PORTD as output
-  DDRC = 0x00; // PORTC as input
-  // init ADC
-  // REFSn[1:0]=01 => select Vref=5V, MUXn[4:0]=0000 => select     ADC0(pin
-  // PC0), ADLAR=0 => Right adjust the ADC result
-  ADMUX = 0b01000000;
-  // ADEN=1 => ADC Enable, ADCS=0 => No Conversion,
-  // ADIE=1 => disable adc interrupt, ADPS[2:0]=111 => fADC=16MHz/128=125KHz
-  ADCSRA = 0b10000111;
+    DDRD = 0xFF; // set PORTD as output
+    DDRC = 0x00; // PORTC as input
+    // init ADC
+    // REFSn[1:0]=01 => select Vref=5V, MUXn[4:0]=0000 => select     ADC0(pin
+    // PC0), ADLAR=0 => Right adjust the ADC result
+    ADMUX = 0b01000000;
+    // ADEN=1 => ADC Enable, ADCS=0 => No Conversion,
+    // ADIE=1 => disable adc interrupt, ADPS[2:0]=111 => fADC=16MHz/128=125KHz
+    ADCSRA = 0b10000111;
 
-  lcd_init(); // init LCD
-  _delay_us(50);
+    lcd_init(); // init LCD
+    _delay_us(50);
 
-  // Initialize the UART interface with a baud rate of 9600
-  usart_init(103);
-  _delay_us(50);
+    // Initialize the UART interface with a baud rate of 9600
+    usart_init(103);
+    _delay_us(50);
 
-  twi_init(); // init twi
-  PCA9555_0_write(REG_CONFIGURATION_1,
-                  0xF0); // Set IO1_0-3 as output, IO1_4-7 as input
-  _delay_ms(500);
-  uint8_t t;
+    twi_init(); // init twi
+    PCA9555_0_write(REG_CONFIGURATION_1,
+                    0xF0); // Set IO1_0-3 as output, IO1_4-7 as input
+    _delay_ms(500);
+    uint8_t t;
 
-  // useful for reconnection
-  // messageString = "Fail"
-  // while(strcmp(messageString, "Success") =! 0){
-  // Transmit the string "ESP:restart\n" over UART
-  const char *espRestartString = "ESP:restart\n";
-  transmitStringOverUart(espRestartString);
-  _delay_ms(500);
+    // Transmit the string "ESP:restart\n" over UART
+    const char *espRestartString = "ESP:restart\n";
+    transmitStringOverUart(espRestartString);
+    _delay_ms(500);
 
-  // Transmit the string "ESP:connect\n" over UART
-  const char *espConnectString = "ESP:connect\n";
-  transmitStringOverUart(espConnectString);
+    // Transmit the string "ESP:connect\n" over UART
+    const char *espConnectString = "ESP:connect\n";
+    transmitStringOverUart(espConnectString);
 
-  // Create a buffer to store the incoming message
-  char message[BUFFER_SIZE];
-  // Read the message from the UART interface
-  char *messageString = readMessageFromUart(message, BUFFER_SIZE);
-  _delay_ms(1000);
-  // Check if the message is "Success" or "Fail"
+    // Create a buffer to store the incoming message
+    char message[BUFFER_SIZE];
+    // Read the message from the UART interface
+    char *messageString = readMessageFromUart(message, BUFFER_SIZE);
+    _delay_ms(1000);
+    // Check if the message is "Success" or "Fail"
     if (strstr(messageString, "\"Success\"") != NULL) {
       // Write "Connection successful" to the LCD screen
       writeMessageToLcd("1.Success");
@@ -570,20 +568,19 @@ int main() {
     } else {
       writeMessageToLcd(messageString);
     }
-  // else return 0; //another message could be useful here
 
-  // delay to make LCD message visible
-  _delay_ms(2000);
+    // delay to make LCD message visible
+    _delay_ms(2000);
 
-  // Transmit the string "ESP:url:"http://192.168.1.250:5000/data"\n" over UART
-  const char *espUrlString = "ESP:url:\"http://192.168.1.250:5000/data\"\n";
-  transmitStringOverUart(espUrlString);
+    // Transmit the string "ESP:url:"http://192.168.1.250:5000/data"\n" over UART
+    const char *espUrlString = "ESP:url:\"http://192.168.1.250:5000/data\"\n";
+    transmitStringOverUart(espUrlString);
 
-  // Read the message from the UART interface
-  messageString = readMessageFromUart(message, BUFFER_SIZE);
+    // Read the message from the UART interface
+    messageString = readMessageFromUart(message, BUFFER_SIZE);
 
-  _delay_ms(1000);
-  // Check if the message is "Success" or "Fail"
+    _delay_ms(1000);
+    // Check if the message is "Success" or "Fail"
     if (strstr(messageString, "\"Success\"") != NULL) {
       // Write "Connection successful" to the LCD screen
       writeMessageToLcd("2.Success");
@@ -593,114 +590,118 @@ int main() {
     } else {
       writeMessageToLcd(messageString);
     }
-  //  else return 0; //another message could be useful here
+    // delay to make LCD message visible
+    _delay_ms(2000);
 
-  // delay to make LCD message visible
-  _delay_ms(2000);
-  while(1){
-    //(a): read temp from DS18B20
-    lcd_init();
-    _delay_ms(50);
-    get_temp();   
-    uint16_t temp = (high & 0b0111);
-    temp = (temp << 8) + low;
-    uint16_t temp_dec = temp & 0b1111;
-    temp_dec = temp_dec*0.0625*1000;
-    temp_dec = temp_dec/100;
-    temp = temp * 0.0625;
+    int status_flag = 0;  //0 = OK, 1 = NURSECALL
+    while(1){
+        lcd_init();
+        _delay_ms(50);
+      
+        //(c)
+        const char *status;
+        if(status_flag == 0)
+            status = "OK";
+        else
+            status = "NURSECALL";
+        DDRD = 0xFF; // re init portd
+        _delay_ms(15);
+        _delay_ms(15);
+        uint16_t temp;
+        uint16_t temp_dec;
+        int pressure;
+        int pressure_dec;
+        while(1) {
+            _delay_ms(50);
+            get_temp();   
+            temp = (high & 0b0111);
+            temp = (temp << 8) + low;
+            temp_dec = temp & 0b1111;
+            temp_dec = temp_dec*0.0625*1000;
+            temp_dec = temp_dec/100;
+            temp = temp * 0.0625;
 
-    temp += 15; // adjust accordingly to temp on lab
+            temp += 15; // adjust accordingly to temp on lab
 
-    //(b) read value simulating pressure from POT0
-    ADCSRA |= 0b01000000;
-    while (1) { // wait for ADSC to become 0
-      unsigned int t = ADCSRA & 0b01000000;
-      if (t == 0)
-        break;
+            //(b) read value simulating pressure from POT0
+            ADCSRA |= 0b01000000;
+            while (1) { // wait for ADSC to become 0
+              unsigned int t = ADCSRA & 0b01000000;
+              if (t == 0)
+                break;
+            }
+            pressure = ADC;
+            pressure_dec = (pressure/5.1);
+            pressure_dec = pressure_dec%10;
+            pressure /= 51; // Convert to 0-20 cm scale
+            int i=0;
+            for(i=0; i<=100; i++){
+                t = keypad_to_ascii();
+                if (t != 0){break;}
+            }
+            if (t != 0) { // if a button was pressed update status
+                if (t == '6' && status_flag == 0) {
+                  status = "NURSECALL";
+                  status_flag = 1;
+                  break;
+                }
+                else if(t == '#' && status_flag == 1){
+                    status = "OK";
+                    status_flag = 0;
+                    break;
+                }            
+            }
+
+            if(status_flag == 0){            
+                if (pressure < 4 || pressure > 12){
+                  status = "CHECKPRESSURE";
+                }
+                else if (temp < 34 || temp > 37) {
+                  status = "CHECKTEMP";
+                }
+                else {
+                  status = "OK";
+                  status_flag = 0;
+                }
+            }
+            DDRD = 0xFF;
+            lcd_init();
+            char payload[1024];
+            snprintf(payload, sizeof(payload),
+                     "[{\"name\":\"temperature\",\"value\":\"%hu.%d\"},{\"name\":\"pressure\",\"value\":\"%d.%d\"},{\"name\":\"team\",\"value\":\"56\"},{\"name\":\"status\",\"value\":\"%s\"}]",temp,temp_dec,pressure, pressure_dec,status);
+
+            char payload_comm[512];
+            // prepare payload command string
+            strcpy(payload_comm, "ESP:payload:");
+            strcat(payload_comm, payload);
+            strcat(payload_comm, "\n");
+
+            _delay_ms(2000);
+            // print values in LCD display
+            //  Convert the first integer value to a string
+            char value1String[10];
+            sprintf(value1String, "%hu", temp);
+
+            // Convert the second integer value to a string
+            char value2String[10];
+            sprintf(value2String, "%d", pressure);
+
+            // Concatenate the two value strings together
+            char message_1[20];
+            strcpy(message_1, value1String);
+            strcat(message_1, " ");
+            strcat(message_1, value2String);
+
+            // Write the concatenated message to the first line of the LCD screen
+            writeMessageToLcd(message_1);
+            // Set the cursor to the first character of the second line
+            lcd_command(0xC0);
+            _delay_ms(500);
+            for (int i = 0; i < strlen(status); i++) {
+              lcd_data(status[i]);
+            }
+            _delay_ms(1000);
+        }
     }
-    int pressure = ADC;
-    int pressure_dec = (pressure/5.1);
-    pressure_dec = pressure_dec%10;
-    pressure /= 51; // Convert to 0-20 cm scale
-
-    //(c)
-    /*  while (first == 0 || first > '9' || first < '0')
-        ; // wait for 1st number to be pressed*/
-    const char *status = "OK";
-    int i;
-    DDRD = 0xFF; // re init portd
-    _delay_ms(15);
-    writeMessageToLcd("WAITING");
-    _delay_ms(15);
-  while (1) {
-     t = keypad_to_ascii();
-     if (t != 0) { // if a button was pressed update status
-       if (t == '6') {
-         status = "NURSECALL";
-         int j;
-         while (1) {
-           t = keypad_to_ascii();
-           if (t != 0) {
-             if (t == '#') {
-               if (pressure < 4 || pressure > 12){
-                 status = "CHECKPRESSURE";
-                 break;
-               }
-               else if (temp < 34 || temp > 37) {
-                 status = "CHECKTEMP";
-                 break;
-               }
-               else {
-                 status = "OK";
-                 break;
-               }
-             } 
-             else
-               break;
-           }
-         }
-         break;
-       } else
-         break;
-     }
-   }
-
-    char payload[1024];
-    snprintf(payload, sizeof(payload),
-             "[{\"name\":\"temperature\",\"value\":\"%hu.%d\"},{\"name\":\"pressure\",\"value\":\"%d.%d\"},{\"name\":\"team\",\"value\":\"56\"},{\"name\":\"status\",\"value\":\"%s\"}]",temp,temp_dec,pressure, pressure_dec,status);
-    
-    char payload_comm[512];
-    // prepare payload command string
-    strcpy(payload_comm, "ESP:payload:");
-    strcat(payload_comm, payload);
-    strcat(payload_comm, "\n");
-    _delay_ms(5000);
-    // print values in LCD display
-    //  Convert the first integer value to a string
-    char value1String[10];
-    sprintf(value1String, "%hu", temp);
-
-    // Convert the second integer value to a string
-    char value2String[10];
-    sprintf(value2String, "%d", pressure);
-
-    // Concatenate the two value strings together
-    char message_1[20];
-    strcpy(message_1, value1String);
-    strcat(message_1, " ");
-    strcat(message_1, value2String);
-    _delay_ms(200);
-
-    // Write the concatenated message to the first line of the LCD screen
-    writeMessageToLcd(message_1);
-    _delay_ms(200);
-    // Set the cursor to the first character of the second line
-    lcd_command(0xC0);
-    _delay_ms(500);
-    for (int i = 0; i < strlen(status); i++) {
-      lcd_data(status[i]);
-    }
-    _delay_ms(5000);
-  }
   return 0;
 }

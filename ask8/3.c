@@ -543,9 +543,6 @@ int main() {
   _delay_ms(500);
   uint8_t t;
 
-  // useful for reconnection
-  // messageString = "Fail"
-  // while(strcmp(messageString, "Success") =! 0){
   // Transmit the string "ESP:restart\n" over UART
   const char *espRestartString = "ESP:restart\n";
   transmitStringOverUart(espRestartString);
@@ -570,7 +567,6 @@ int main() {
     } else {
       writeMessageToLcd(messageString);
     }
-  // else return 0; //another message could be useful here
 
   // delay to make LCD message visible
   _delay_ms(2000);
@@ -593,7 +589,7 @@ int main() {
     } else {
       writeMessageToLcd(messageString);
     }
-  //  else return 0; //another message could be useful here
+  
   int status_flag = 0;  //0 = OK, 1 = NURSECALL
   // delay to make LCD message visible
   _delay_ms(2000);
@@ -603,8 +599,6 @@ int main() {
     _delay_ms(50);
 
     //(c)
-    /*  while (first == 0 || first > '9' || first < '0')
-        ; // wait for 1st number to be pressed*/
     const char *status;
     if(status_flag == 0)
         status = "OK";
@@ -684,11 +678,6 @@ int main() {
     // send payload command
     transmitStringOverUart(payload_comm);
 
-    /*
-    const char *payload_test = "ESP:payload:[{\"name\":\"team\",\"value\":\"56\"}]\n";
-    transmitStringOverUart(payload_test);
-    DDRD = 0xFF; // re init portd
-     * */
     // Read the message from the UART interface
     messageString = readMessageFromUart(message, BUFFER_SIZE);
 

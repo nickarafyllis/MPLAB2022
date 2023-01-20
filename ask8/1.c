@@ -159,61 +159,61 @@ char *readMessageFromUart(char *buffer, int bufferSize) {
 }
 
 int main() {
-  DDRD = 0xFF; // set PORTD as output
+    DDRD = 0xFF; // set PORTD as output
 
-  lcd_init(); // init LCD
-  _delay_us(500);
+    lcd_init(); // init LCD
+    _delay_us(500);
 
-  // Initialize the UART interface with a baud rate of 9600
-  usart_init(103);
-  _delay_us(50);
+    // Initialize the UART interface with a baud rate of 9600
+    usart_init(103);
+    _delay_us(50);
 
-const char *messageString;
-// Create a buffer to store the incoming message
-char message[BUFFER_SIZE];
-// Transmit the string "ESP:restart\n" over UART
-const char *espRestartString = "ESP:restart\n";
-transmitStringOverUart(espRestartString);
-_delay_ms(500);
-// Transmit the string "ESP:connect\n" over UART
-const char *espConnectString = "ESP:connect\n";
-transmitStringOverUart(espConnectString);
-// Read the message from the UART interface
-messageString = readMessageFromUart(message, BUFFER_SIZE);
+    const char *messageString;
+    // Create a buffer to store the incoming message
+    char message[BUFFER_SIZE];
+    // Transmit the string "ESP:restart\n" over UART
+    const char *espRestartString = "ESP:restart\n";
+    transmitStringOverUart(espRestartString);
+    _delay_ms(500);
+    // Transmit the string "ESP:connect\n" over UART
+    const char *espConnectString = "ESP:connect\n";
+    transmitStringOverUart(espConnectString);
+    // Read the message from the UART interface
+    messageString = readMessageFromUart(message, BUFFER_SIZE);
 
-if (strstr(messageString, "\"Success\"") != NULL) {
-  // Write "Connection successful" to the LCD screen
-  writeMessageToLcd("1.Success");
-} else if (strstr(messageString, "\"Fail\"") != NULL) {
-  //  Write "Connection failed" to the LCD screen
-  writeMessageToLcd("1.Fail");
-} else {
-  writeMessageToLcd(messageString);
-}
+    if (strstr(messageString, "\"Success\"") != NULL) {
+      // Write "Connection successful" to the LCD screen
+      writeMessageToLcd("1.Success");
+    } else if (strstr(messageString, "\"Fail\"") != NULL) {
+      //  Write "Connection failed" to the LCD screen
+      writeMessageToLcd("1.Fail");
+    } else {
+      writeMessageToLcd(messageString);
+    }
 
-// delay to make LCD message visible
-_delay_ms(6000);
+    // delay to make LCD message visible
+    _delay_ms(6000);
 
-// reset buffer
-memset(message, 0, sizeof(message));
+    // reset buffer
+    memset(message, 0, sizeof(message));
 
-// Transmit the string "ESP:url:"http://192.168.1.250:5000/data"\n" over
-// UART
-const char *espUrlString = "ESP:url:\"http://192.168.1.250:5000/data\"\n";
-transmitStringOverUart(espUrlString);
+    // Transmit the string "ESP:url:"http://192.168.1.250:5000/data"\n" over
+    // UART
+    const char *espUrlString = "ESP:url:\"http://192.168.1.250:5000/data\"\n";
+    transmitStringOverUart(espUrlString);
 
-// Read the message from the UART interface
-messageString = readMessageFromUart(message, BUFFER_SIZE);
+    // Read the message from the UART interface
+    messageString = readMessageFromUart(message, BUFFER_SIZE);
 
-_delay_ms(1000);
-// Check if the message is "Success" or "Fail"
-if (strstr(messageString, "\"Success\"") != NULL) {
-  // Write "Connection successful" to the LCD screen
-  writeMessageToLcd("2.Success");
-} else if (strstr(messageString, "\"Fail\"") != NULL) {
-  // if (strcmp(messageString, "Fail") == 0)
-  //  Write "Connection failed" to the LCD screen
-  writeMessageToLcd("2.Fail");
-} else
-  writeMessageToLcd(messageString); // another message could be useful here
+    _delay_ms(1000);
+    // Check if the message is "Success" or "Fail"
+    if (strstr(messageString, "\"Success\"") != NULL) {
+      // Write "Connection successful" to the LCD screen
+      writeMessageToLcd("2.Success");
+    } else if (strstr(messageString, "\"Fail\"") != NULL) {
+      // if (strcmp(messageString, "Fail") == 0)
+      //  Write "Connection failed" to the LCD screen
+      writeMessageToLcd("2.Fail");
+    } else
+      writeMessageToLcd(messageString); // another message could be useful here
 }
